@@ -244,10 +244,10 @@ global.initAudio = () => { // OPENDAY 2024 AND BROWSER EDITION + SOUNDTRACK
 	document.getElementById("loader").style.display = "none"
 	// randomSketch()
 	// toggleDirector()
-	const soundtrack = document.createElement('audio')
-	soundtrack.src = "assets/soundtrack/soundtrack.mp3"
-	soundtrack.loop = true;
-	soundtrack.play();
+	// const soundtrack = document.createElement('audio')
+	// soundtrack.src = "assets/soundtrack/soundtrack.mp3"
+	// soundtrack.loop = true;
+	// soundtrack.play();
 }
 
 // UI
@@ -343,6 +343,7 @@ const loadTexture = (name, path, format) => {
 // Let's preload our textures
 // global.cubeTextures[n]
 loadCubeTexture('PureSky', './assets/textures/cube/PureSky-256/', '.png') // 0
+loadCubeTexture('PureSky', './assets/textures/cube/AbandonedParking-1024/', '.png') // 1
 // ...
 // global.textures[n]
 loadTexture('StoneDiff', './assets/textures/stone_tiles_02_diff_1k', '.jpg') // 0
