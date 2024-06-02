@@ -46,7 +46,7 @@ export function sketch() {
     // others 
     {
       name: 'appeso',
-      color: 1,
+      color: 10,
       kind: 'special',
       repetitions: 3,
       loopInOut: false
@@ -74,14 +74,14 @@ export function sketch() {
     },
     {
       name: 'eremita',
-      color: 7,
+      color: 9,
       kind: 'special',
       repetitions: 3,
       loopInOut: false
     },
     {
       name: 'forza',
-      color: 8,
+      color: 7,
       kind: 'special',
       repetitions: 3,
       loopInOut: false
@@ -102,7 +102,7 @@ export function sketch() {
     },
     {
       name: 'guardingo',
-      color: 2,
+      color: 0,
       kind: 'special',
       repetitions: 1,
       loopInOut: false
@@ -116,35 +116,35 @@ export function sketch() {
     },
     {
       name: 'imperatrice',
-      color: 4,
-      kind: 'special',
-      repetitions: 1,
-      loopInOut: false
-    },
-    {
-      name: 'innamorati',
       color: 5,
       kind: 'special',
       repetitions: 1,
       loopInOut: false
     },
     {
+      name: 'innamorati',
+      color: 0,
+      kind: 'special',
+      repetitions: 1,
+      loopInOut: false
+    },
+    {
       name: 'luna',
-      color: 6,
+      color: 8,
       kind: 'special',
       repetitions: 3,
       loopInOut: true
     },
     {
       name: 'mago',
-      color: 7,
+      color: 1,
       kind: 'special',
       repetitions: 3,
       loopInOut: false
     },
     {
       name: 'matto',
-      color: 8,
+      color: 4,
       kind: 'special',
       repetitions: 3,
       loopInOut: false
@@ -158,14 +158,14 @@ export function sketch() {
     },
     {
       name: 'morte',
-      color: 10,
+      color: 6,
       kind: 'special',
       repetitions: 1,
       loopInOut: false
     },
     {
       name: 'noia',
-      color: 0,
+      color: 9,
       kind: 'special',
       repetitions: 1,
       loopInOut: false
@@ -179,7 +179,7 @@ export function sketch() {
     },
     {
       name: 'ruota',
-      color: 2,
+      color: 8,
       kind: 'special',
       repetitions: 3,
       loopInOut: false
@@ -200,7 +200,7 @@ export function sketch() {
     },
     {
       name: 'sole',
-      color: 5,
+      color: 7,
       kind: 'special',
       repetitions: 3,
       loopInOut: false
