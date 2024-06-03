@@ -1,5 +1,5 @@
 // Empty sketch
-let onWindowResize
+let onWindowResize //
 
 export function sketch() {
     // console.log("Set launched")

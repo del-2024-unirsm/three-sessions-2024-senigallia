@@ -21,6 +21,8 @@ export function sketch() {
 
     // RENDER EMPTY
     renderer.render(scene, camera) // RENDER
+
+    // test 
 }
 
 export function dispose() {

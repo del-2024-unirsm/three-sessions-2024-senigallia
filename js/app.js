@@ -35,6 +35,7 @@ global.THREE = THREE
 global.GUI = GUI
 global.CANNON = CANNON
 global.NOISE = NOISE
+global.PI = Math.PI
 
 global.showStats = true // xxx
 
@@ -325,6 +326,7 @@ const loadCubeTexture = (name, path, format) => {
 	global.cubeTextures.push({
 		name: name,
 		texture: cubeTextureLoader.load(urls, (cube) => {
+			cube.colorSpace = THREE.SRGBColorSpace
 			// console.log('loadedCubeTexture: ' + cube)
 		})
 	})
@@ -336,6 +338,7 @@ const loadTexture = (name, path, format) => {
 	global.textures.push({
 		name: name,
 		texture: textureLoader.load(url, (texture) => {
+			texture.colorSpace = THREE.SRGBColorSpace
 			// console.log('loadedTexture: ' + texture)
 		})
 	})
@@ -343,9 +346,7 @@ const loadTexture = (name, path, format) => {
 // Let's preload our textures
 // global.cubeTextures[n]
 loadCubeTexture('PureSky', './assets/textures/cube/PureSky-256/', '.png') // 0
-loadCubeTexture('AbandonedParking', './assets/textures/cube/AbandonedParking-1024/', '.png') // 1
-loadCubeTexture('cloud', './assets/textures/cube/cloud/', '.png') // 2
-loadCubeTexture('TropicalSunnyDay', './assets/textures/cube/TropicalSunnyDay/', '.jpg') // 3
+loadCubeTexture('PureSky', './assets/textures/cube/PureSky-2048/', '.png') // 1
 // ...
 // global.textures[n]
 loadTexture('luna_1k_diff', './assets/textures/luna_1k_diff', '.png') // 0
@@ -390,7 +391,7 @@ const randomSketch = () => {
 	*/
 	const sets = [0, 1, 2, 3, 4] // available sets
 	const setsWeights = [0.20, 0.20, 0.20, 0.20, 0.20] // available sets: probability weight
-	const sketches = [1, 1, 1, 1, 8] // no. of available sketches for each set
+	const sketches = [1, 3, 3, 2, 1] // no. of available sketches for each set
 	// playSet
 	// pure random
 	// global.playSet = Math.round(Math.random() * (sets.length - 1));

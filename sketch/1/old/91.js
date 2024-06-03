@@ -1,259 +1,231 @@
-//scale che fluttuano
+// CILINDRI CHE DANZANO SINUSOIDE
 
+let onWindowResize;
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
-import { Reflector } from 'three/examples/jsm/objects/Reflector.js'
+import { Reflector } from 'three/examples/jsm/objects/Reflector'
+// import { EXRLoader } from 'three/examples/jsm/loaders/EXRLoader.js';
 
-import { RectAreaLightHelper } from 'three/addons/helpers/RectAreaLightHelper.js';
-import { RectAreaLightUniformsLib } from 'three/addons/lights/RectAreaLightUniformsLib.js';
 
-let scene
-let groundMate, mirrorMate
-let groundGeom, stepSideGeom, reflectorBackGeom
-let mirrorBack // reflector
-let animation
-let onWindowResize
-let noise3D
-// let gui
-let controls
 
 export function sketch() {
-    // console.log("Sketch launched")
 
-    // PARAMETERS
-    const p = {
-        // objects
-        lightSpeed: .2,
-        animate: false,
-        // ...
-        // view
-        lookAtCenter: new THREE.Vector3(0, 1, 0),
-        cameraPosition: new THREE.Vector3(- 3 + Math.random() * 6, -0.5, -5),
-        autoRotate: false,
-        autoRotateSpeed: -1,
-        camera: 35,
-        // ...
-        // world
-        background: new THREE.Color(0x000000),
-        floor: -0.5,
-        // ...
-    }
-
-    // other parameters
-    let near = 0.2, far = 200
-    let shadowMapWidth = 2048, shadowMapHeight = 2048
-
-    // CAMERA
-    let camera = new THREE.PerspectiveCamera(p.camera, window.innerWidth / window.innerHeight, near, far)
-    camera.position.copy(p.cameraPosition)
-    camera.lookAt(p.lookAtCenter)
+   // CAMERA
+    let camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 1000);
+    camera.position.z = 5;
+    camera.position.y = 3;
+  
 
     // WINDOW RESIZE
-    const onWindowResize = () => {
-        camera.aspect = window.innerWidth / window.innerHeight
-        camera.updateProjectionMatrix()
-        renderer.setSize(window.innerWidth, window.innerHeight)
-    }
-    window.addEventListener('resize', onWindowResize)
+    onWindowResize = () => {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+    };
+    window.addEventListener('resize', onWindowResize);
 
-    // CONTROLS
-    controls = new OrbitControls(camera, renderer.domElement)
-    controls.enablePan = false
-    controls.enableDamping = true
-    controls.dampingFactor = 0.05
-    controls.minDistance = 5
-    controls.maxDistance = 15
-    controls.maxPolarAngle = Math.PI / 2
-    controls.minPolarAngle = Math.PI / 2 - 0.8
-    //controls.maxAzimuthAngle = - Math.PI / 2
-    //controls.minAzimuthAngle = Math.PI / 2
-    controls.autoRotate = p.autoRotate
-    controls.autoRotateSpeed = p.autoRotateSpeed
-    controls.target = p.lookAtCenter
 
     // SCENE
-    scene = new THREE.Scene()
-    scene.background = p.background
-    scene.fog = new THREE.Fog(scene.background, 3, 30)
-    // materials
-    mirrorMate = new THREE.MeshPhongMaterial({
-        color: 0x444444,
-        envMap: cubeTextures[2].texture,
-        side: THREE.DoubleSide,
-        combine: THREE.addOperation,
-        reflectivity: 1,
-        // specular: 0x999999,
-        fog: true
-    })
-    groundMate = new THREE.MeshStandardMaterial({
-        color: 0x000000,
-        roughness: 1,
-        metalness: 0,
-        fog: true,
-    })
 
-    // REFLECTOR
-    let mirrorW = .7
-    let mirrorH = 3
-    mirrorBack = new Reflector(
-        new THREE.PlaneGeometry(mirrorW, mirrorH),
-        {
-            clipBias: 0.003,
-            color: new THREE.Color(0x7f7f7f),
-            textureWidth: window.innerWidth * window.devicePixelRatio,
-            textureHeight: window.innerHeight * window.devicePixelRatio,
-        })
-    mirrorBack.position.y = p.floor + mirrorH / 2
-    mirrorBack.position.z = 7
-    mirrorBack.rotation.y = Math.PI
-    scene.add(mirrorBack)
-    // let's make the mirror backside to do a shadow
-    reflectorBackGeom = new THREE.PlaneGeometry(mirrorW, mirrorH)
-    let reflectorBack = new THREE.Mesh(reflectorBackGeom, mirrorMate)
-    reflectorBack.position.y = p.floor + mirrorW / 2
-    reflectorBack.position.z = 7.05
-    reflectorBack.rotation.y = Math.PI
-    reflectorBack.castShadow = true
-    scene.add(reflectorBack)
-    // let's make some light below the mirror...
-    RectAreaLightUniformsLib.init();
-    let rectLightIntensity = 100
-    const rectLight = new THREE.RectAreaLight(0x9eddec, rectLightIntensity, mirrorW, mirrorH)
-    rectLight.position.set(0, p.floor + mirrorH / 2, 7.025)
-    scene.add(rectLight)
-    const rectLightHelper = new RectAreaLightHelper(rectLight)
-    rectLight.add(rectLightHelper)
+    const debugObject = {
+        waveDepthColor: "#1e4d40",
+        waveSurfaceColor: "#4d9aaa",
+        fogNear: 3,
+        fogFar: 10,
+        fogColor: "#8e99a2"
+    };
 
-    // GEOMETRIES
-    // let's make a staircase mirror    
-    let stepW = 1.2
-    let stepH = 0.4
-    stepSideGeom = new THREE.PlaneGeometry(stepW, stepH)
+    const scene = new THREE.Scene();
+    scene.fog = new THREE.Fog(
+        debugObject.fogColor,
+        debugObject.fogNear,
+        debugObject.fogFar
+    );
+
+//     // Load EXR texture
+//   const exrLoader = new EXRLoader();
+//   exrLoader.load('./assets/textures/bosco4.exr', function(texture) {
+//     texture.mapping = THREE.EquirectangularReflectionMapping;
+//     scene.environment = texture;
+//     scene.background = texture;
+//   });
 
 
-    let minSteps = 5
-    let maxStepsDelta = 10
-    const ramps = []
-    for (let r = 0; r < 10; r++) {
-        const steps = new THREE.Group
-        const rampSteps = minSteps + Math.random() * maxStepsDelta
-        for (let s = 0; s < rampSteps; s++) {
+    // Point light
+    const light1 = new THREE.PointLight(0xffffff, 10);
+    light1.castShadow = true;
+    scene.add(light1);
 
-            const stepV = new THREE.Mesh(stepSideGeom, mirrorMate)
-            const stepH = new THREE.Mesh(stepSideGeom, mirrorMate)
-            // front side
-            stepV.position.y = p.floor + 0.2 + s * .4
-            stepV.position.z = s * .4
-            // top side
-            stepH.rotation.x = Math.PI / 2
-            stepH.position.y = p.floor + .4 + s * .4
-            stepH.position.z = .2 + s * .4
-            // shadows
-            stepH.castShadow = true
-            stepV.castShadow = true
-            // add to rampgroup
-            steps.add(stepH)
-            steps.add(stepV)
+    const pointLight = new THREE.PointLight(0xFFFFFF, 0.5); // Luce direzionale con intensità 2
+    pointLight.position.set(2.5, 2.5, 2.5); // Posiziona la luce sopra la scena
+    pointLight.castShadow = true; // Abilita la creazione di ombre
+    scene.add(pointLight);
+
+
+    // REFLECTIVE FLOOR
+
+    // Creare il riflettore
+    // const refe = new Reflector(new THREE.PlaneGeometry(25, 15), {
+    //      clipBias: 0.003,
+    //      textureWidth: window.innerWidth * window.devicePixelRatio,
+    //      extureHeight: window.innerHeight * window.devicePixelRatio,
+    //      color: 0x777777
+    //  });
+    //  refe.rotateX(-Math.PI / 2); 
+    //  refe.position.x = 6;
+    //  scene.add(refe);
+
+    // Creare il materiale opaco trasparente
+    const planeMaterial = new THREE.MeshLambertMaterial({
+    color: 0x888888,
+    transparent: true,
+    opacity: 0.8
+    });
+
+    // Creare il secondo piano leggermente sopra il riflettore
+    // const planeGeometry = new THREE.PlaneGeometry(25, 15);
+    // const plane = new THREE.Mesh(planeGeometry, planeMaterial);
+    // plane.rotateX(-Math.PI / 2);
+    // plane.position.y += 0.01;  // Posiziona leggermente sopra il riflettore
+    // plane.position.x += 6; 
+    // plane.receiveShadow = true;
+    // scene.add(plane);
+
+
+    const orbitControls = new OrbitControls(camera, renderer.domElement)
+    orbitControls.enableDamping = true
+    orbitControls.target.set(0, 1, 0)
+
+    light1.shadow.mapSize.width = 1024;
+    light1.shadow.mapSize.height = 1024;
+    light1.shadow.camera.near = 0.1;
+    light1.shadow.camera.far = 100;
+    pointLight.shadow.mapSize.width = 1024;
+    pointLight.shadow.mapSize.height = 1024;
+    pointLight.shadow.camera.near = 0.1;
+    pointLight.shadow.camera.far = 100;
+
+    // Back mirror
+    // const mirrorBack1 = new Reflector(new THREE.PlaneGeometry(25, 15), {
+    //     color: new THREE.Color(0x7f7f7f),
+    //     textureWidth: window.innerWidth * window.devicePixelRatio,
+    //     textureHeight: window.innerHeight * window.devicePixelRatio,
+    // });
+
+    // mirrorBack1.position.y = 7.5;
+    // mirrorBack1.position.z = -6;
+    // mirrorBack1.position.x = 6;
+    // scene.add(mirrorBack1);
+
+
+
+
+    // CYLINDERS
+    const cylinderGeometry = new THREE.CylinderGeometry(0.01, 0.05, 10, 15);
+    const cylinderMaterial = new THREE.MeshStandardMaterial({
+        color: 0xffffff,
+        emissive: 0x202020,
+        emissiveIntensity: 2.0,
+        roughness: 0.5,
+        metalness: 0.1,
+    });
+
+    const cylinderSpacingX = 0.5;
+    const cylinderSpacingZ = 3;
+
+    let arrayCilindri = [];
+
+    for (let j = 0; j < 4; j++) {
+        arrayCilindri[j] = [];
+        for (let i = 0; i < 40; i++) {
+            const cylinder = new THREE.Mesh(cylinderGeometry, cylinderMaterial);
+            // Posiziona il cilindro in modo che la sua base inferiore aderisca esattamente al piano
+            cylinder.position.set(i * cylinderSpacingX - 6.5 * cylinderSpacingX, 5, j * cylinderSpacingZ - 1.5 * cylinderSpacingZ);
+            cylinder.castShadow = true;
+            scene.add(cylinder);
+            arrayCilindri[j][i] = cylinder;
         }
-        // find an orientation for the ramp
-        let rampOrientation = Math.floor(Math.random() * 4)
-        steps.rotation.y = Math.PI / 2 * rampOrientation
-        steps.position.x = - 1 + r * 3
-        steps.position.z = - 1 + r * 3
-        steps.position.x =  r * 3
-        steps.userData.offset = Math.random() * 2 * Math.PI; // Random offset for each ramp
-        ramps.push(steps)
-        scene.add(steps)
     }
-    // let's make a ground
-    groundGeom = new THREE.PlaneGeometry(20, 20)
-    let ground = new THREE.Mesh(groundGeom, groundMate)
-    ground.position.set(0, p.floor, 0)
-    ground.rotation.x = - Math.PI / 2
-    ground.scale.set(100, 100, 100)
-    ground.castShadow = false
-    ground.receiveShadow = true
-    scene.add(ground)
 
-    const light = new THREE.DirectionalLight(0xffffff, 10)
-    light.position.set(0, 2, -5)
-    // light.target = cube
-    light.castShadow = true
-    light.shadow.radius = 8
-    light.shadow.camera.near = 2
-    light.shadow.camera.far = 200
-    light.shadow.bias = 0.0001
-    light.shadow.mapSize.width = shadowMapWidth
-    light.shadow.mapSize.height = shadowMapHeight
-    scene.add(light)
-    // const lightHelper = new THREE.DirectionalLightHelper(light, 5);
-    // scene.add(lightHelper);
+    // CANNON.js SETUP
+    const world = new CANNON.World();
+    world.gravity.set(-10, -9.81, 10);
+    world.broadphase = new CANNON.NaiveBroadphase();
+    world.solver.iterations = 10;
 
-    const lightD = new THREE.DirectionalLight(0x9eddec, 10)
-    light.position.set(0, 3, -3)
-    light.target.position.set(0, 0, 0)
-    scene.add(lightD)
-    // const pointLight = new THREE.PointLight(0xffffff, 2)
-    // pointLight.position.set(20, 20, 20)
-    // scene.add(pointLight)
-    // const pointLight2 = new THREE.PointLight(0xffffff, .1)
-    // pointLight2.position.set(-30, 20, -20)
-    // scene.add(pointLight2)
-    // const ambientLight = new THREE.AmbientLight(0xffffff)
-    // scene.add(ambientLight)
+    const fixedBody = new CANNON.Body({
+        mass: 0, // Imposta a 0 per creare un corpo fisso
+        position: new CANNON.Vec3(0, 2, 0),
+    });
+    world.addBody(fixedBody);
 
-    // GUI
-    // gui = new GUI.GUI()
-    // const nameFolder = gui.addFolder('Name of the folder')
-    // nameFolder.add(cube.rotation, 'x', 0, Math.PI * 2)
-    // nameFolder.open()
-    // ...
+    const cylinderBodies = [];
+    const cylinderShape = new CANNON.Cylinder(0.01, 0.1, 10, 15);
+    const mass = 1;
 
-    noise3D = NOISE.createNoise3D()
-    const t0 = Math.random() * 10
+    for (let j = 0; j < 4; j++) {
+        for (let i = 0; i < 40; i++) {
+            const cylinderBody = new CANNON.Body({
+                mass: mass,
+                position: new CANNON.Vec3(i * cylinderSpacingX - 6.5 * cylinderSpacingX, 5, j * cylinderSpacingZ - 1.5 * cylinderSpacingZ),
+            });
+            cylinderBody.addShape(cylinderShape);
+            world.addBody(cylinderBody);
+            cylinderBodies.push(cylinderBody);
 
-    // ANIMATE
-    const animate = () => {
-        if (showStats) stats.begin() // XXX
-
-        if (p.animate) {
-            // ANIMATION
-            const t = t0 + performance.now() * 0.0001
-            const t1 = t * p.lightSpeed + 0
-            const t2 = t1 + 10
-            camera.position.set(noise3D(t1, 0, 0) * 2, noise3D(0, t1 + 4, 0) * 1, -6)
-            controls.target.set(noise3D(t2, 0, 0) * 2, 1, noise3D(0, t2 + 4, 0) * 2)
-            // ...
+            // Aggiungi il vincolo tra il cilindro e il corpo fisso
+            const constraint = new CANNON.PointToPointConstraint(cylinderBody, new CANNON.Vec3(0, 0, 0), fixedBody, new CANNON.Vec3(i * cylinderSpacingX - 6.5 * cylinderSpacingX, 0, j * cylinderSpacingZ - 1.5 * cylinderSpacingZ));
+            world.addConstraint(constraint);
         }
-
-        // Apply sinusoidal vertical movement to ramps
-        const time = performance.now() * 0.001; // Current time in seconds
-        const amplitude = 0.05; // Reduced amplitude of the fluctuation
-        const frequency = 1; // Frequency of the fluctuation
-        ramps.forEach(ramp => {
-            const randomVerticalOffset = Math.sin(time * frequency + ramp.userData.offset) * amplitude;
-            ramp.position.y = p.floor + randomVerticalOffset; // Ensure ramps do not go below the floor level
-        });
-
-        controls.update()
-        renderer.render(scene, camera) // RENDER
-        if (showStats) stats.end() // XXX
-
-        animation = requestAnimationFrame(animate) // CIAK
     }
-    animate()
+
+     // NOISE SETUP
+ 
+     const clock = new THREE.Clock();
+
+    function applySinusoidalMovement() {
+        const time = performance.now() * 0.001;
+        const amplitude = 5; // Amplitude del movimento sinusoidale
+        const frequency = 0.5; // Frequenza del movimento sinusoidale
+    
+        for (let j = 0; j < 4; j++) {
+            for (let i = 0; i < 40; i++) {
+                const a = Math.floor(Math.random()*4);
+                const b = Math.floor(Math.random()*40);
+                const cylinder = arrayCilindri[a][b];
+                if (cylinder) {
+                    const offsetY = Math.sin(time * frequency + a * 0.5 + b * 0.1) * amplitude;
+                    if (cylinder.position.y <= 5 && offsetY > 5) {
+                        // Se il cilindro è sul piano e il movimento successivo sarebbe verso l'alto
+                        // Imposta la posizione y al piano
+                        cylinder.position.y = 0;
+                    } else {
+                        // Altrimenti, applica il movimento sinusoidale
+                        cylinder.position.y = offsetY;
+                    }
+                }
+            }
+        }
+    }
+    
+    
+
+    // ANIMATION
+
+    function animate() {
+        requestAnimationFrame(animate);
+        
+        
+        applySinusoidalMovement();
+
+
+        renderer.render(scene, camera);
+    }
+
+    animate();
+
 }
 
+
 export function dispose() {
-    cancelAnimationFrame(animation)
-    controls?.dispose()
-    groundGeom?.dispose()
-    reflectorBackGeom?.dispose()
-    groundMate?.dispose()
-    stepSideGeom?.dispose()
-    mirrorMate?.dispose()
-    mirrorBack?.dispose()
-    noise3D = null
-    // gui?.destroy()
-    // ...
-    window.removeEventListener('resize', onWindowResize)
+    window?.removeEventListener('resize', onWindowResize);
 }

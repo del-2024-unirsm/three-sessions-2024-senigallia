@@ -1,261 +1,83 @@
-// EYE
+// CLOTH
 
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
-import { clone } from 'three/examples/jsm/utils/SkeletonUtils.js';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
-import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
-import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js'
-import { RenderPass } from 'three/addons/postprocessing/RenderPass.js'
-import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
-import { materialEmissive, metalness, texture } from 'three/examples/jsm/nodes/Nodes.js'
-
-
-
-let scene
-let geometry, groundGeom, groundMate
-let material, material2, mirrorMate
-let animation
-let onWindowResize
+let scene, camera, animation, onWindowResize, controls, onMouseMove
+let groundGeom
+let groundMate, clothMaterial, mirrorMate, clothGeometry
+let world, groundBody
 let noise3D
-let controls
-let composer
-let renderPass
-let bloomPass
-let loaderGLTF
+let cloth, clothParticles, constraints = []
+let flowField
+let light, lightD, ambientLight
+const anchorBodies = [];
+const vertices = [];
 
 export function sketch() {
-    // console.log("Sketch launched")
+
+    let mouse = new THREE.Vector2()
+    onMouseMove = (event) => {
+        mouse.x = (event.clientX / window.innerWidth) * 2 - 1
+        mouse.y = -(event.clientY / window.innerHeight) * 2 + 1
+    };
+    window.addEventListener('mousemove', onMouseMove);
 
     const p = {
-        // colors
-        availableColorsHighlights: [0xffffff, 0xff0000, 0x00ff00, 0x0000ff, 0xffff00, 0x00ffff, 0xff00ff],
-        availableColors: [0xffffff, 0xcc0000, 0x00cc00, 0x0000cc, 0xcccc00, 0x00cccc, 0xcc00cc],
-        // time
-        timeSpeed: 0.0001,
-        // planet
-        planetScale: 3,
-        planetScaleAuto: true,
-        planetScaleMax: .25,
-        planetPos: new THREE.Vector3(0, 3, 0),
-        planetSpeed: .7,
-        planetRotationSpeed: 2,
-        // view
-        lookAtCenter: new THREE.Vector3(0, 0, 0),
-        cameraPosition: new THREE.Vector3(-4 + Math.random() * 10, -3, 10 + Math.random() * 5),
+        // cloth
+        clothWidth: 10,
+        clothHeight: 10,
+        clothResolution: 25,
+        // viewgf
+        lookAtCenter: new THREE.Vector3(0, 5, 3),
+        cameraPosition: new THREE.Vector3(0, 1, - 7 - Math.random() * 25),
         autoRotate: false,
-        autoRotateSpeed: -0.02,
+        autoRotateSpeed: -1 + Math.random() * 2,
         camera: 35,
-        // bloom
-        exposure: 0,
-        bloomStrength: 2,
-        bloomThreshold: .25,
-        bloomRadius: 1.2,
         // world
-        background: new THREE.Color(0x333333),
-        floor: -4,
-    }
-
-    // select main scene color, random choose for now
-    // let whichColor = p.availableColors.length * Math.random() | 0
-    // p.background = new THREE.Color(p.availableColors[whichColor])
+        background: new THREE.Color(0x000000),
+        clothMass: 1,
+        gravity: -18,
+        wind: true,
+        windStrength: 2 + Math.random() * 8,
+        floor: -2,
+    };
 
     // other parameters
-    let near = 0.2, far = 100
-    let shadowMapWidth = 2048, shadowMapHeight = 2048
+    let near = 0.2, far = 1000;
+    let shadowMapWidth = 2048, shadowMapHeight = 2048;
+    let paused = false;
 
     // CAMERA
-    let camera = new THREE.PerspectiveCamera(p.camera, window.innerWidth / window.innerHeight, near, far)
+    camera = new THREE.PerspectiveCamera(p.camera, window.innerWidth / window.innerHeight, near, far)
     camera.position.copy(p.cameraPosition)
     camera.lookAt(p.lookAtCenter)
 
     // WINDOW RESIZE
-    const onWindowResize = () => {
-        camera.aspect = window.innerWidth / window.innerHeight
-        camera.updateProjectionMatrix()
-        renderer.setSize(window.innerWidth, window.innerHeight)
-    }
-    window.addEventListener('resize', onWindowResize)
-
-    // CONTROLS
-    controls = new OrbitControls(camera, renderer.domElement)
-    controls.enablePan = false
-    controls.enableDamping = true
-    controls.dampingFactor = 0.05
-    controls.minDistance = 10
-    controls.maxDistance = 25
-    controls.maxPolarAngle = Math.PI / 2 + 0.2
-    controls.minPolarAngle = Math.PI / 2 - 0.4
-    controls.autoRotate = p.autoRotate
-    controls.autoRotateSpeed = p.autoRotateSpeed
-    controls.target = p.lookAtCenter
+    onWindowResize = () => {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+    };
+    window.addEventListener('resize', onWindowResize);
 
     // SCENE
     scene = new THREE.Scene()
     scene.background = p.background
-    scene.fog = new THREE.Fog(scene.background, near, far)
-    // geometry = new THREE.ConeGeometry(1, 2, 64)
+    scene.fog = new THREE.Fog(scene.background, 15, 80)
+    world = new CANNON.World({
+        gravity: new CANNON.Vec3(0, p.gravity, 0)
+    });
+    world.solver.iterations = 10
 
-    mirrorMate = new THREE.MeshPhongMaterial({
-        color: 0xffffff,
-        map: textures[1].texture,
-        envMap: cubeTextures[0].texture,
-        // side: THREE.DoubleSide,
-        combine: THREE.addOperation,
-        reflectivity: 1,
-        // flatShading: true,
-        shininess: 100,
-        // specular: 0x999999,
-        fog: true
-    })
-
-    //  eye
-    // This "skull" model is based on "Skull Salazar (Downloadable)" (https://sketchfab.com/3d-models/skull-salazar-downloadable-eeed09437afb4e1ea8a6ff3b0e9964ad) by jvitorsouzadesign (https://sketchfab.com/jvitorsouzadesign) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
-    //GLTFLoader
-    //eye
-    let gltfLoaded = false
-    let eye, eye2, eye3
-    let modelGroup;
-
-    loaderGLTF = new GLTFLoader()
-    loaderGLTF.load(
-        './assets/models/eye/scene.gltf',
-        (gltf) => {
-
-            gltfLoaded = true
-
-            eye = gltf.scene.children[0]
-            // eye.position.copy(p.lookAtCenter)
-            eye.position.y = .7
-            eye.rotation.x = -1.4
-
-            eye.traverse((node) => {
-                if (node.isMesh) {
-                    node.castShadow = true
-                    // node.receiveShadow = true
-                    if (node.name === "Object_4") {
-                        node.material = mirrorMate
-                        // node.material.roughness = 0
-                        // node.material.metalness = .2
-                        // node.material.fog = true
-                    }
-                }
-            })
-
-            scene.add(eye)
-
-            eye2 = clone(eye);
-            eye2.position.x = -5;
-            eye2.position.z = -2;
-            scene.add(eye2);
-
-            eye3 = clone(eye);
-            eye3.position.x = 5;
-            eye3.position.z = -2;
-            scene.add(eye3);
-
-            // let eyeMat = eye.children[0].children[0].material
-            // console.log(calaveraMat)
-            // eyeMat.map = null
-            // calaveraToothMat.map = null
-            // calaveraMat.roughness = 1
-            // calaveraToothMat.roughness = 1
-            gltfLoaded = true
-        },
-        (xhr) => {
-            // console.log((xhr.loaded / xhr.total * 100) + '% loaded')
-        },
-        (error) => {
-            // console.log('An error happened loading the GLTF scene')
-            alert(error)
-        }
-    )
-
-
-    // POST-PROCESSING
-    composer = new EffectComposer(renderer)
-    renderPass = new RenderPass(scene, camera)
-    composer.addPass(renderPass)
-    //bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 1.5, 0.4, 0.85);
-    //bloomPass.threshold = p.bloomThreshold
-    //bloomPass.strength = p.bloomStrength
-    //bloomPass.radius = p.bloomRadius
-    //composer.addPass(bloomPass)
-
-    // Planet cone
-    /*let planet
-    material = new THREE.MeshStandardMaterial({
-        color: 0xff99ff,
-        map: textures[0].texture,
-        roughness: 0,
-        metalness: 0
-    })
-    planet = new THREE.Mesh(geometry, material)
-    planet.rotation.z += Math.PI
-    planet.position.y = 0
-    planet.position.x = 0
-    planet.scale.set(p.planetScale, p.planetScale, p.planetScale)
-    planet.castShadow = true
-    planet.receiveShadow = true
-    // scene.add(planet)
-     
-    // Planet cone 2
-    let planet2
-    material2 = new THREE.MeshStandardMaterial({
-        color: 0xbb8833,
-        map: textures[0].texture,
-        roughness: 0,
-        metalness: 0
-    })
-    planet2 = new THREE.Mesh(geometry, material2)
-    // planet2.rotation.z += Math.PI
-    planet2.position.y = 0
-    planet2.position.x = 0
-    planet2.scale.set(p.planetScale, p.planetScale, p.planetScale)
-    planet2.castShadow = true
-    planet2.receiveShadow = true
-    // scene.add(planet2) */
-
-    // LIGHTS
-    let lightS = new THREE.SpotLight(0x999999, 1, 0, Math.PI / 5, 0.5)
-    lightS.position.set(1, 2, 10)
-    lightS.target.position.set(0, 0, 0)
-    lightS.castShadow = true
-    lightS.shadow.camera.near = 5
-    lightS.shadow.camera.far = 200
-    lightS.shadow.bias = 0.0001
-    lightS.shadow.mapSize.width = shadowMapWidth
-    lightS.shadow.mapSize.height = shadowMapHeight
-    scene.add(lightS)
-
-    const light = new THREE.DirectionalLight(0xffffff, .5)
-    light.position.set(0, 2, 10)
-    light.target.position.clone(eye)
-    // light.castShadow = true
-    scene.add(light)
-    // const light2 = new THREE.DirectionalLight(0xffffff, .4)
-    // light.position.set(-10, 3, -10)
-    // light.target.position.set(-5, 0, 0)
-    // light.castShadow = true
-    // scene.add(light2)
-    const pointLight1 = new THREE.PointLight(0xffffff, 1)
-    pointLight1.position.set(0, 1, 2)
-    scene.add(pointLight1)
-    // const pointLight = new THREE.PointLight(0xffffff, .5)
-    // pointLight.position.set(20, 20, 20)
-    // scene.add(pointLight)
-    // const pointLight2 = new THREE.PointLight(0xffffff, .1)
-    // pointLight2.position.set(-30, 20, -20)
-    // scene.add(pointLight2)
-    // const ambientLight = new THREE.AmbientLight(0xffffff)
-    // scene.add(ambientLight)
-
-    // let's make a ground
+    // MATERIALS
     groundMate = new THREE.MeshStandardMaterial({
         color: p.background,
         roughness: 1,
         metalness: 0,
         fog: true,
     })
+
+    // Static ground plane
     groundGeom = new THREE.PlaneGeometry(20, 20)
     let ground = new THREE.Mesh(groundGeom, groundMate)
     ground.position.set(0, p.floor, 0)
@@ -264,52 +86,304 @@ export function sketch() {
     ground.castShadow = false
     ground.receiveShadow = true
     scene.add(ground)
+    groundBody = new CANNON.Body({
+        position: new CANNON.Vec3(0, p.floor - 1, 0),
+        mass: 0,
+        shape: new CANNON.Plane(),
+    });
+    groundBody.quaternion.setFromAxisAngle(new CANNON.Vec3(1, 0, 0), -Math.PI / 2);
+    groundBody.quaternion.setFromEuler(-Math.PI / 2, 0, 0);
+    world.addBody(groundBody);
+    ground.position.copy(groundBody.position);
+    ground.quaternion.copy(groundBody.quaternion);
+
+    // CONTROLS
+    controls = new OrbitControls(camera, renderer.domElement);
+    controls.enablePan = false;
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.05;
+    controls.minDistance = 5;
+    controls.maxDistance = 40;
+    controls.maxPolarAngle = Math.PI / 2 + 0.2;
+    controls.minPolarAngle = Math.PI / 2 - 0.4;
+    controls.autoRotate = p.autoRotate;
+    controls.autoRotateSpeed = p.autoRotateSpeed;
+    controls.target = p.lookAtCenter;
+
+    // CLOTH
+    const cWidth = p.clothWidth
+    const cHeight = p.clothHeight
+    const Nx = p.clothResolution
+    const Ny = p.clothResolution
+    clothGeometry = new THREE.PlaneGeometry(cWidth, cHeight, Nx, Ny)
+    mirrorMate = new THREE.MeshPhongMaterial({
+        color: 0x444444,
+        envMap: cubeTextures[0].texture,
+        side: THREE.DoubleSide,
+        flatShading: true,
+        // combine: THREE.addOperation,
+        // reflectivity: 0,
+        // specular: 0x999999,
+        // fog: true
+    })
+
+    cloth = new THREE.Mesh(clothGeometry, mirrorMate)
+    cloth.castShadow = true
+    // cloth.receiveShadow = true
+    scene.add(cloth)
+
+    const restDistanceX = cWidth / Nx
+    const restDistanceY = cHeight / Ny
+    clothParticles = []
+    const mass = (p.clothMass / Nx) * Ny
+
+    const connectParticles = (x1, y1, x2, y2) => {
+        const particleA = clothParticles[x1][y1];
+        const particleB = clothParticles[x2][y2];
+        const distance = particleA.position.distanceTo(particleB.position);
+        const constraint = new CANNON.DistanceConstraint(particleA, particleB, distance);
+        world.addConstraint(constraint);
+        constraints.push(constraint);
+    }
+
+    for (let x = 0; x <= Nx; x++) {
+        clothParticles.push([])
+        for (let y = 0; y <= Ny; y++) {
+
+            const hangingPosition = new CANNON.Vec3(
+                (x - Nx * 0.5) * restDistanceX,
+                p.floor + cHeight + 4,
+                (y - Ny * 0.5) * restDistanceY
+            )
+
+            const particle = new CANNON.Body({
+                mass: mass,
+                // mass: y === Ny ? 0 : mass, // line
+                // mass: y >= Ny - 2 && x >= Nx - 2 || y >= Ny - 2 && x <= 2 ? 0 : mass, // arms
+                // mass: y >= Ny - 2 && x >= Nx - 1 || y >= Ny - 2 && x <= 1 || y <= 2 && x <= 1 || y <= 2 && x >= Nx - 1 ? 0 : mass, // 4 arms
+                position: hangingPosition,
+                shape: new CANNON.Particle(),
+                velocity: new CANNON.Vec3(0, 0, 0),
+                linearDamping: 0.5
+            });
+
+            clothParticles[x].push(particle);
+            world.addBody(particle);
+        }
+    }
+
+    // Constrains
+    for (let x = 0; x <= Nx; x++) {
+        for (let y = 0; y <= Ny; y++) {
+            if (x < Nx && y < Ny) {
+                connectParticles(x, y, x, y + 1);
+                connectParticles(x, y, x + 1, y);
+            } else if (x === Nx && y < Ny) {
+                connectParticles(x, y, x, y + 1);
+            } else if (x < Nx && y === Ny) {
+                connectParticles(x, y, x + 1, y);
+            }
+        }
+    }
+
+    // Aggiungi le corde elastiche
+    const anchorDistance = 2;
+    const anchorPoints = [
+        // new CANNON.Vec3(-cWidth / 2, p.floor + anchorDistance, -cHeight / 2),
+        // new CANNON.Vec3(cWidth / 2, p.floor + anchorDistance, -cHeight / 2),
+        new CANNON.Vec3(cWidth / 2 + .2, p.floor + cHeight + 6 + anchorDistance, cHeight / 2),
+        new CANNON.Vec3(-cWidth / 2 - .2, p.floor + cHeight + 6 + anchorDistance, cHeight / 2),
+    ];
+    anchorPoints.forEach((point) => {
+        const anchorBody = new CANNON.Body({
+            mass: 0,
+            position: point,
+            shape: new CANNON.Particle(),
+        });
+        anchorBodies.push(anchorBody);
+        world.addBody(anchorBody);
+    });
+
+    const cornerParticles = [
+        // clothParticles[0][0],
+        // clothParticles[Nx][0],
+        clothParticles[Nx][Ny],
+        clothParticles[0][Ny],
+    ];
+
+    cornerParticles.forEach((particle, index) => {
+        const anchorBody = anchorBodies[index];
+        const constraint = new CANNON.DistanceConstraint(particle, anchorBody, anchorDistance);
+        world.addConstraint(constraint);
+        constraints.push(constraint);
+    });
+
+    // Initialize the vertices of the cloth
+
+    for (let x = 0; x <= Nx; x++) {
+        for (let y = 0; y <= Ny; y++) {
+            vertices.push(new THREE.Vector3());
+        }
+    }
+    clothGeometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(vertices.length * 3), 3));
+
+    light = new THREE.DirectionalLight(0xffffff, 7 * PI)
+    light.position.set(0, 10, -5)
+    light.target.position.set(0, 2, 10)
+    light.castShadow = true
+    light.shadow.radius = 16
+    light.shadow.camera.near = 2
+    light.shadow.camera.far = 200
+    light.shadow.bias = 0.0001
+    light.shadow.mapSize.width = shadowMapWidth
+    light.shadow.mapSize.height = shadowMapHeight
+    light.decay = 0
+    scene.add(light)
+    const lightHelper = new THREE.DirectionalLightHelper(light, 5);
+    // scene.add(lightHelper);
+
+    lightD = new THREE.DirectionalLight(0xffffff, 3 * PI)
+    lightD.position.set(2, 0, -5)
+    lightD.target.position.set(0, 2, 10)
+    lightD.decay = 0
+    scene.add(lightD)
+
+    ambientLight = new THREE.AmbientLight(0xffffff)
+    scene.add(ambientLight)
 
     // NOISE
     noise3D = NOISE.createNoise3D()
-    const t0 = Math.random() * 10
+    let t0 = Math.random() * 10
 
-    // ANIMATE
-    const animate = () => {
-        if (showStats) stats.begin() // XXX
+    // Flowfield per il vento
+    const flowFieldSize = 32 // Dimensione della griglia del flowfield
+    flowField = createFlowField(flowFieldSize, 0) // Inizializzazione del flowfield
+    function createFlowField(size, offsetSpeed) {
+        const flowField = []
+        const noiseFreq = 0.1 // Frequenza del rumore per il flowfield
 
-        const t = t0 + performance.now() * p.timeSpeed
+        for (let y = 0; y < size; y++) {
+            const row = []
+            for (let x = 0; x < size; x++) {
+                const noiseX = noise3D(x * noiseFreq, offsetSpeed, y * noiseFreq);
+                const noiseY = noise3D(x * noiseFreq, y * noiseFreq, offsetSpeed);
 
-        // ANIMATION
-        if (gltfLoaded && eye) {
-            // pointLight1.position.copy(eye.position)
-            // pointLight1.position.y -= .5
-            const t3 = t * p.planetSpeed + 2
-            eye.rotation.z = -0.1 + noise3D(0, t3 + 4, 0) * .8
-            eye.rotation.y = -0.1 + noise3D(0, 0, t3) * .8
+                const windDirection = new THREE.Vector3(- mouse.x, - mouse.y, 0).normalize();
+                const windIntensity = Math.sqrt(mouse.x * mouse.x + mouse.y * mouse.y);
+                // const vector = windDirection.multiplyScalar(windIntensity * p.windStrength);
+                const vector = new THREE.Vector3(-mouse.x + noiseX, 0, -mouse.y + noiseY).normalize().multiplyScalar(p.windStrength + windIntensity * 2);
 
-            eye2.rotation.z = -0.1 + noise3D(0, t3 + 7, 0) * .5
-            eye2.rotation.y = -0.1 + noise3D(0, 0, t3 + 22) * .5
-
-            eye3.rotation.z = -0.1 + noise3D(0, t3 + 9, 0) * .3
-            eye3.rotation.y = -0.1 + noise3D(0, 0, t3 + 12) * .3
+                row.push(vector);
+            }
+            flowField.push(row);
         }
 
+        return flowField;
+    }
+
+    // ANIMATE
+    const timeStep = 1 / 60
+    const stepsPerFrame = 2
+    let lastCallTime
+
+    const animate = () => {
+        if (showStats) stats.begin();
+
+        // ANIMATION
+        if (!paused) {
+
+            const t = performance.now() / 1000
+
+            if (!lastCallTime) {
+                for (let i = 0; i < stepsPerFrame; i++) {
+                    world.step(timeStep);
+                }
+            } else {
+                const dt = t - lastCallTime;
+                const numSteps = Math.ceil(dt / timeStep);
+                for (let i = 0; i < numSteps; i++) {
+                    world.step(timeStep);
+                }
+            }
+            lastCallTime = t
+
+            // CANNON SIMULATION
+
+            if (p.wind) {
+                const t1 = t * 1.0 // speed
+                // Aggiorna il flowfield
+                flowField = createFlowField(flowFieldSize, t1 * 0.1); // Regola la velocità di animazione del flowfield
+
+                for (let x = 0; x <= Nx; x++) {
+                    for (let y = 0; y <= Ny; y++) {
+                        const particle = clothParticles[x][y];
+
+                        // Ottieni il vettore del flusso dalla griglia del flowfield
+                        let gridX = Math.floor((particle.position.x + cWidth / 2) / cWidth * flowFieldSize)
+                        let gridY = Math.floor((particle.position.z + cHeight / 2) / cHeight * flowFieldSize)
+
+                        // Confinare gridX e gridY nei limiti dell'array flowField
+                        gridX = Math.max(0, Math.min(flowFieldSize - 1, gridX))
+                        gridY = Math.max(0, Math.min(flowFieldSize - 1, gridY))
+                        const windForce = flowField[gridY][gridX].clone()
+
+                        particle.applyForce(windForce);
+                    }
+                }
+            }
+
+            const positions = cloth.geometry.attributes.position.array;
+            for (let x = 0; x <= Nx; x++) {
+                for (let y = 0; y <= Ny; y++) {
+                    const particle = clothParticles[x][y]
+                    const index = (x * (Nx + 1) + y) * 3
+                    positions[index] = particle.position.x
+                    positions[index + 1] = particle.position.y
+                    positions[index + 2] = particle.position.z
+                }
+            }
+            cloth.geometry.attributes.position.needsUpdate = true
+        }
 
         controls.update()
-        renderer.render(scene, camera) // RENDER
-        composer.render() // POST-PROCESSING
-        if (showStats) stats.end() // XXX
+        renderer.render(scene, camera)
+        if (showStats) stats.end()
 
-        animation = requestAnimationFrame(animate) // CIAK
-    }
+        animation = requestAnimationFrame(animate)
+    };
     animate()
 }
 
 export function dispose() {
     cancelAnimationFrame(animation)
+    scene.remove(cloth);
+    clothParticles?.forEach((row) => {
+        row.forEach((particle) => {
+            world.removeBody(particle);
+        });
+    });
+    constraints?.forEach((constraint) => {
+        world.removeConstraint(constraint);
+    });
+    anchorBodies?.forEach((anchorBody) => {
+        world.removeBody(anchorBody);
+    });
+    world.removeBody(groundBody);
+    light?.dispose();
+    lightD?.dispose();
+    // constraints = null;
+    clothParticles = null;
     controls?.dispose()
-    geometry?.dispose()
-    material?.dispose()
-    material2?.dispose()
+    clothMaterial?.dispose()
+    mirrorMate?.dispose()
+    groundGeom?.dispose()
+    groundMate?.dispose()
+    clothGeometry?.dispose();
+    // world = null
+    // vertices= null;
     noise3D = null
-    composer?.dispose()
-    renderPass?.dispose()
-    bloomPass?.dispose()
-    window.removeEventListener('resize', onWindowResize)
+    flowField = null
+    camera = null
+    window?.removeEventListener('resize', onWindowResize)
+    window?.removeEventListener('mousemove', onMouseMove)
 }

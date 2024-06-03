@@ -1,4 +1,5 @@
-//scale che si costruiscono
+//costruzione scale 1 gradino per volta + scale che fluttuano
+
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { Reflector } from 'three/examples/jsm/objects/Reflector.js'
 import { RectAreaLightHelper } from 'three/addons/helpers/RectAreaLightHelper.js';
@@ -52,7 +53,7 @@ export function sketch() {
 
     mirrorMate = new THREE.MeshPhongMaterial({
         color: 0x444444,
-        envMap: cubeTextures[0].texture,
+        envMap: cubeTextures[2].texture,
         side: THREE.DoubleSide,
         combine: THREE.addOperation,
         reflectivity: 1,
@@ -110,7 +111,7 @@ export function sketch() {
 
     let minSteps = 5;
     let maxStepsDelta = 10;
-    for (let r = 0; r < 20; r++) { //aumentare o diminiire il numero delle scalinate
+    for (let r = 0; r < 10; r++) {
         const steps = new THREE.Group();
         const rampSteps = minSteps + Math.random() * maxStepsDelta;
         for (let s = 0; s < rampSteps; s++) {

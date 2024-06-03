@@ -17,14 +17,14 @@ export function sketch() {
         lookAtCenter: new THREE.Vector3(0, 0, 0),
         cameraPosition: new THREE.Vector3(25, -25, Math.random() * 75),
         autoRotate: true,
-        autoRotateSpeed: -.5,
+        autoRotateSpeed: -2,
         camera: 35,
 
         //SPHERE
         num_sphere: 1000,
         vector: new THREE.Vector3(0, 1, 0),
         gravityCenter: new THREE.Vector3(0, 0, 0),
-        sphereRadius: 1,
+        sphereRadius: 1,//0.5+Math.random()*5,
         tempVector: new THREE.Vector3(),
 
     }
@@ -60,8 +60,20 @@ export function sketch() {
     scene.background = new THREE.Color(0x000000)
     scene.fog = new THREE.Fog(scene.background, 100, 1000)
 
-    // MATERIAL
-    material = new THREE.MeshBasicMaterial({ color: 0x3300ff })
+    // LIGHT
+    const light = new THREE.PointLight(0xffffff, 10, 100)
+    light.position.set(50, 50, 50)
+    scene.add(light)
+
+
+    //MATERIAL
+    //material = new THREE.MeshPhongMaterial({ color: 0x3300ff, specular: 0x555555, shininess: 30 })
+    material = new THREE.MeshStandardMaterial({
+        color: 0xE33117,
+        //emissive: 0xE33117,
+        metalness: 0.7,
+        roughness: 0.2
+    })
 
     const num_sphere = p.num_sphere
     const vector = p.vector
@@ -69,7 +81,7 @@ export function sketch() {
     const sphereRadius = p.sphereRadius
     const tempVector = p.tempVector
 
-    // INSTANCED MESH SETvector
+    // INSTANCED MESH SETUP
     const geometry = new THREE.SphereGeometry(sphereRadius, 16, 16)
     const instancedMesh = new THREE.InstancedMesh(geometry, material, num_sphere)
     scene.add(instancedMesh)
