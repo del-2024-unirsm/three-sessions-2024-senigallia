@@ -391,14 +391,14 @@ export function dispose() {
     groundGeom?.dispose()
     groundMate?.dispose()
     lanceGeometry?.dispose()
-    lances.forEach((lance) => {
-        world.removeBody(lance.body);
+    lances?.forEach((lance) => {
+        world?.removeBody(lance.body);
         // lance.body.shapes.forEach((shape) => {
         //     shape.dispose();
         // });
     });
-    world.constraints.forEach((constraint) => {
-        world.removeConstraint(constraint);
+    world?.constraints.forEach((constraint) => {
+        world?.removeConstraint(constraint);
     });
     world = null
     noise3D = null
