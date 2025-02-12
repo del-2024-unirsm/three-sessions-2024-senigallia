@@ -394,7 +394,7 @@ const randomSketch = () => {
 	*/
 	const sets = [0, 1, 2, 3, 4, 5] // available sets
 	const setsWeights = [0.30, 0.20, 0.30, 0.10, 0.05, 0.05] // available sets: probability weight (sum = 1)
-	const sketches = [10, 2, 8, 3, 3, 3] // no. of available sketches for each set
+	const sketches = [10, 2, 8, 3, 3, 2] // no. of available sketches for each set
 	// playSet
 	// pure random
 	// global.playSet = Math.round(Math.random() * (sets.length - 1));
@@ -419,9 +419,9 @@ const reclickSketch = () => {
 	}
 }
 
-/* director mode, auto play and switch between sketches 5-20 sec */
+/* director mode, auto play and switch between sketches 5-30 sec */
 const playDirector = () => {
-	const randSec = 5 + Math.round(Math.random() * 20);
+	const randSec = 5 + Math.round(Math.random() * 25);
 	nextCut = setTimeout(() => {
 		const randSix = Math.round(Math.random() * 6);
 		if (randSix > 4) reclickSketch(); // 1/3 chances next reclick current sketch
