@@ -29,7 +29,7 @@ npx vite
 npx vite build
 ```
 ### Instructions
-- Openday 2024 edition: `[space]` random sketch | `[return]` reclick/reload current sketch | `F5` enable director/auto play mode
+- Openday 2025 edition: `[space]` random sketch | `[return]` reclick/reload current sketch | `F5` enable director/auto play mode
 - Live edition: `[0–9]` change sets | `[a-z]` change sketches | `\` toggle mouse | `F6` toggle fullscreen | `shift ?` enable mic | `drag` 3D orbit | `pinch` 3D zoom
 
 _work in progress, more credits && work to come, stay tuned [@fupete](https://twitter.com/fupete)_
