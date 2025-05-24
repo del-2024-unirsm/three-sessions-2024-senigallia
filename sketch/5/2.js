@@ -23,36 +23,36 @@ export function sketch() {
   const p = {
     // colors
     availableColorsHighlights: [
-      // 0xE48CFF, // Violet
-      // 0x4DFFFF, // Light blue
-      // 0xffffff, // White
-      // 0x0000FF, // Blue
-      // 0xFFFF00, // Yellow
-      // 0xFFF3D6, // Light Yellow
-      // 0xFFCFC0, // Pink
-      // 0xFF0000, // Red
-      // 0x93FF22, // Light green
-      // 0x00CF00, // Dark green
-      0x000000  // Black
+      0xE48CFF, // Violet
+      0x4DFFFF, // Light blue
+      0xffffff, // White
+      0x0000FF, // Blue
+      0xFFFF00, // Yellow
+      0xFFF3D6, // Light Yellow
+      0xFFCFC0, // Pink
+      0xFF0000, // Red
+      0x93FF22, // Light green
+      0x00CF00, // Dark green
+      // 0x000000  // Black
     ],
     availableColors: [
-      // 0x532B5F, // Violet
-      // 0x9eddec, // Light blue
-      // 0xaaaaaa, // White
-      // 0x0140A6, // Blue
-      // 0xFFC702, // Yellow
-      // 0xFED374, // Light Yellow
-      // 0xFACDA4, // Pink
-      // 0xE33117, // Red
-      // 0x92BE23, // Light green
-      // 0x1E841E, // Dark green
-      0x232323  // Black
+      0x532B5F, // Violet
+      0x9eddec, // Light blue
+      0xaaaaaa, // White
+      0x0140A6, // Blue
+      0xFFC702, // Yellow
+      0xFED374, // Light Yellow
+      0xFACDA4, // Pink
+      0xE33117, // Red
+      0x92BE23, // Light green
+      0x1E841E, // Dark green
+      // 0x232323  // Black
     ],
     // view
     lookAtCenter: new THREE.Vector3(0, 0, 0),
     cameraPosition: new THREE.Vector3(-1, 10, 0),
     autoRotate: false,
-    autoRotateSpeed: -.05,
+    autoRotateSpeed: -5 + Math.random() * 5,
     camera: 35,
     // world
     background: new THREE.Color(0xffffff),
@@ -62,9 +62,10 @@ export function sketch() {
 
   // select main scene color, random choose for now
   let whichColor = p.availableColors.length * Math.random() | 0
-  const color = new THREE.Color(p.availableColors[whichColor])
+  // const color = new THREE.Color(p.availableColors[whichColor])
   const hightLight = new THREE.Color(p.availableColorsHighlights[whichColor])
   p.background = hightLight
+  let paused = false
 
   // other parameters
   let near = 0.2, far = 200
@@ -116,8 +117,9 @@ export function sketch() {
   groundGeom = new THREE.PlaneGeometry(20, 20)
   let ground = new THREE.Mesh(groundGeom, groundMate)
   ground.position.set(0, p.floor, 0)
-  ground.rotation.x = - Math.PI / 2
-  ground.scale.set(100, 100, 100)
+  ground.rotation.x = - Math.random() * Math.PI
+  ground.rotation.y = -Math.random() * Math.PI / 2
+  ground.scale.set(10, 10, 10)
   scene.add(ground)
 
   // LIGHTS
@@ -137,20 +139,61 @@ export function sketch() {
   light.decay = 0
   scene.add(light)
 
-  // NOISE
+  const steadycamFlowSpeed = 0.005; // Aumentato il valore per una maggiore velocità
+  const steadycamFlowAmplitude = 0.01; // Aumentato il valore per una maggiore ampiezza
+  let steadycamFlowTime = 0;
+  function clamp(value, min, max) {
+    return Math.min(Math.max(value, min), max);
+  }
+  const steadycamBounds = {
+    x: { min: -10, max: 10 }, // Allargati i limiti sull'asse x
+    y: { min: 2, max: 10 }, // Allargati i limiti sull'asse y
+    z: { min: -10, max: 10 } // Allargati i limiti sull'asse z
+  };
+
   noise3D = NOISE.createNoise3D()
   const t0 = Math.random() * 10
+  const clock = new THREE.Clock()
 
   // ANIMATE
   const animate = () => {
     if (showStats) stats.begin() // XXX
 
-    // ANIMATION
-    const t = t0 + performance.now() * 0.0001
-    const t1 = t * p.lightSpeed + 0
-    light.position.x = -3 + noise3D(0, t1, 0) * 6
-    // ...
+    if (!paused) {
+      // ANIMATION
+      const t = t0 + performance.now() * 0.0001
+      const t1 = t * p.lightSpeed + 0
+      light.position.x = -3 + noise3D(0, t1, 0) * 6
 
+      let dt = clock.getDelta()
+
+      // Update steadycam flow time
+      steadycamFlowTime += dt * steadycamFlowSpeed;
+
+      // Calculate steadycam flow offsets using noise functions
+      const steadycamFlowX = noise3D(steadycamFlowTime, 0, 0) * steadycamFlowAmplitude;
+      const steadycamFlowY = noise3D(0, steadycamFlowTime, 0) * steadycamFlowAmplitude;
+      const steadycamFlowZ = noise3D(0, 0, steadycamFlowTime) * steadycamFlowAmplitude;
+
+      // Apply steadycam flow to camera position if not in drag mode
+      if (!controls.isDragging) {
+        // const cameraPosition = controls.object.position.clone();
+        // cameraPosition.add(new THREE.Vector3(steadycamFlowX, steadycamFlowY, steadycamFlowZ));
+        // controls.object.position.copy(cameraPosition);
+        const cameraPosition = controls.object.position.clone();
+        cameraPosition.add(new THREE.Vector3(steadycamFlowX, steadycamFlowY, steadycamFlowZ));
+
+        // Clamp the camera position within the defined boundaries
+        cameraPosition.x = clamp(cameraPosition.x, steadycamBounds.x.min, steadycamBounds.x.max);
+        cameraPosition.y = clamp(cameraPosition.y, steadycamBounds.y.min, steadycamBounds.y.max);
+        cameraPosition.z = clamp(cameraPosition.z, steadycamBounds.z.min, steadycamBounds.z.max);
+
+        controls.object.position.copy(cameraPosition);
+
+      }
+      // ...
+
+    }
     controls.update()
     renderer.render(scene, camera) // RENDER
     if (showStats) stats.end() // XXX

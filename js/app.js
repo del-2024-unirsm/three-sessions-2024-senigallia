@@ -245,12 +245,12 @@ global.initAudio = () => { // OPENDAY 2024 AND BROWSER EDITION + SOUNDTRACK
 	document.getElementById("loader").style.display = "none"
 	toggleFullscreen();
 	toggleMouse();
-	// randomSketch()
-	// toggleDirector()
-	// const soundtrack = document.createElement('audio')
-	// soundtrack.src = "assets/soundtrack/soundtrack.mp3"
-	// soundtrack.loop = true;
-	// soundtrack.play();
+	randomSketch()
+	toggleDirector()
+	const soundtrack = document.createElement('audio')
+	soundtrack.src = "assets/soundtrack/soundtrack.mp3"
+	soundtrack.loop = true;
+	soundtrack.play();
 }
 
 // UI
@@ -385,15 +385,16 @@ window.addEventListener('load', init)
 /* change to a random set and sketch */
 const randomSketch = () => {
 	/* 
-	0 colors
-	1 mirror
-	  2 ...
-	  3 landscape
-		4 cloth
+	0 Landscapes
+	1 Mirrors
+	2 Textiles
+	3 Surrealism
+	4 Tarots
+	5 Madness
 	*/
 	const sets = [0, 1, 2, 3, 4, 5] // available sets
-	const setsWeights = [0.15, 0.15, 0.15, 0.15, 0.15, 0.15] // available sets: probability weight
-	const sketches = [7, 2, 3, 3, 3, 3] // no. of available sketches for each set
+	const setsWeights = [0.30, 0.20, 0.30, 0.10, 0.05, 0.05] // available sets: probability weight (sum = 1)
+	const sketches = [10, 2, 8, 3, 3, 2] // no. of available sketches for each set
 	// playSet
 	// pure random
 	// global.playSet = Math.round(Math.random() * (sets.length - 1));
@@ -418,9 +419,9 @@ const reclickSketch = () => {
 	}
 }
 
-/* director mode, auto play and switch between sketches 5-20 sec */
+/* director mode, auto play and switch between sketches 5-30 sec */
 const playDirector = () => {
-	const randSec = 5 + Math.round(Math.random() * 20);
+	const randSec = 5 + Math.round(Math.random() * 25);
 	nextCut = setTimeout(() => {
 		const randSix = Math.round(Math.random() * 6);
 		if (randSix > 4) reclickSketch(); // 1/3 chances next reclick current sketch

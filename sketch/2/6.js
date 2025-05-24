@@ -446,22 +446,22 @@ export function dispose() {
     cancelAnimationFrame(animation);
     scene.remove(cloth);
     scene.remove(cloth2);
-    clothParticles.forEach((row) => {
-        row.forEach((particle) => {
-            world.removeBody(particle);
+    clothParticles?.forEach((row) => {
+        row?.forEach((particle) => {
+            world?.removeBody(particle);
         });
     });
-    clothParticles2.forEach((row) => {
-        row.forEach((particle) => {
-            world.removeBody(particle);
+    clothParticles2?.forEach((row) => {
+        row?.forEach((particle) => {
+            world?.removeBody(particle);
         });
     });
     clothParticles = null;
     clothParticles2 = null;
-    constraints.forEach((constraint) => {
-        world.removeConstraint(constraint);
+    constraints?.forEach((constraint) => {
+        world?.removeConstraint(constraint);
     });
-    world.removeBody(groundBody);
+    world?.removeBody(groundBody);
     controls?.dispose();
     clothMaterial?.dispose();
     mirrorMate?.dispose();

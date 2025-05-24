@@ -389,17 +389,17 @@ export function dispose() {
     cancelAnimationFrame(animation)
     scene.remove(cloth);
     clothParticles?.forEach((row) => {
-        row.forEach((particle) => {
-            world.removeBody(particle);
+        row?.forEach((particle) => {
+            world?.removeBody(particle);
         });
     });
     constraints?.forEach((constraint) => {
-        world.removeConstraint(constraint);
+        world?.removeConstraint(constraint);
     });
     anchorBodies?.forEach((anchorBody) => {
-        world.removeBody(anchorBody);
+        world?.removeBody(anchorBody);
     });
-    world.removeBody(groundBody);
+    world?.removeBody(groundBody);
     light?.dispose();
     lightD?.dispose();
     // constraints = null;
